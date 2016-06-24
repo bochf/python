@@ -1,5 +1,7 @@
 from sys import argv
 from datetime import datetime
+from datetime import timedelta
+
 import tree
 
 
@@ -12,3 +14,6 @@ class FunctionTrace:
         if end_time is not None:
             self.end_time = datetime.strptime(end_time+"000", "%d%b%Y_%H:%M:%S.%f")
             self.duration = self.end_time - self.start_time
+        else:
+            self.end_time = None
+            self.duration = 0
