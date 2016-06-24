@@ -2,6 +2,7 @@ class TreeNode:
     def __init__(self, element=None):
         self.element = element
         self.children = []
+        self.parent = None
 
     def __repr__(self):
         if self.element is None:
@@ -10,6 +11,7 @@ class TreeNode:
             result = str(self.element)
             for child in self.children:
                 result += str(child)
+            result += "</NODE>"
             return result
 
     def size(self):
@@ -21,6 +23,7 @@ class TreeNode:
 
     def addChild(self, element):
         child = TreeNode(element)
+        child.parent = self
         self.children.append(child)
         return child
 
