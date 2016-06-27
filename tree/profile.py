@@ -119,7 +119,7 @@ class TreeBuilder:
 
             del self.storage[:]  # cleanup the node list
 
-            root = [FunctionTrace("Log"), -1, []]  # root element
+            root = [FunctionTrace("-1 Log"), -1, []]  # root element
             self.storage.append(root)              # save in the storage
             current_node = 0                       # current node id
 
@@ -134,9 +134,8 @@ class TreeBuilder:
     def stat(self, node_id, table):
         # analyze the tree to get statistic date of each function
         # function_name, execute_times, total_time
-        key = self.storage[node_id][0]
         element = self.storage[node_id][0]
-        key = element.func_name
+        key = element.func_name.split()[1]
         duration = element.duration()
         if key in table:
             table[key]['count'] += 1
@@ -156,7 +155,7 @@ def help():
 def printStat(table, outfile):
     s = ""
     for func in table:
-        s = func + ', ' + str(table[func]['count']) + ', ' + str(table[func]['time']) + '\n'
+        s += func + ', ' + str(table[func]['count']) + ', ' + str(table[func]['time']) + '\n'
 
     if outfile:
         try:
@@ -210,6 +209,8 @@ def main(argv):
 
     table = {}
     tree.stat(0, table)
+    print table
+
     printStat(table, outfile)
 
     return 0
