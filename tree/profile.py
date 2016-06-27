@@ -207,7 +207,6 @@ def main(argv):
 
     table = {}
     tree.stat(0, table)
-    print table
 
     printStat(table, outfile)
 
