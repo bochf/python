@@ -125,11 +125,11 @@ class TreeBuilder:
 
             for line in file:
                 current_node = self.parseTrace(line.strip(), current_node)
+
+            file.close()
         except:
             traceback.print_exc()
             print "Error in reading file: " + str(self.file_name)
-        finally:
-            file.close()
 
     def stat(self, node_id, table):
         # analyze the tree to get statistic date of each function
@@ -161,11 +161,10 @@ def printStat(table, outfile):
         try:
             out = open(outfile, 'w')
             out.write(s)
+            out.close()
         except:
             traceback.print_exc()
             print "Error in writting file: " + outfile
-        finally:
-            out.close()
     else:
         print s
 
@@ -174,11 +173,10 @@ def printTree(tree, outfile):
         try:
             out = open(outfile, 'w')
             out.write(tree)
+            out.close()
         except:
             traceback.print_exc()
             print "Error in writting file: " + outfile
-        finally:
-            out.close()
     else:
         print tree
 
