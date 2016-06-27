@@ -170,7 +170,7 @@ def printStat(table, outfile):
     else:
         print s
 
-def printTree(tee, outfile):
+def printTree(tree, outfile):
     if outfile:
         try:
             out = open(outfile, 'w')
