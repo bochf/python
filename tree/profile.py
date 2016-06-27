@@ -9,16 +9,18 @@ from tree import TreeNode
 
 
 class FunctionTrace:
-    def __init__(self, func_name, start_time=None, end_time=None):
+    def __init__(self, func_name, start_time=None, stop_time=None):
         self.func_name = func_name
         self.setStartTime(start_time)
-        self.setEndTime(end_time)
+        self.setStopTime(stop_time)
 
     def __repr__(self):
-        s = '"name": "' + self.func_name + '", '
-        s += '"start_time": "' + str(self.start_time) + '", '
-        s += '"end_time": "' + str(self.end_time) + '", '
-        s += '"duration": ' + str(self.duration())
+        # s = '"name": "' + self.func_name.split()[1] + '", '
+        # s += '"start_time": "' + str(self.start_time) + '", '
+        # s += '"stop_time": "' + str(self.stop_time) + '", '
+        # s += '"duration": ' + str(self.duration())
+        s = '"' + self.func_name.split()[1] + '": '
+        s += str(self.duration())
         return s
 
 
@@ -29,14 +31,14 @@ class FunctionTrace:
             # the input is millisecond, need to times 1000 to get microsecond
             self.start_time = datetime.strptime(start_time+"000", "%d%b%Y_%H:%M:%S.%f")
 
-    def setEndTime(self, end_time=None):
-        if end_time is None:
-            self.end_time = datetime.now()
+    def setStopTime(self, stop_time=None):
+        if stop_time is None:
+            self.stop_time = datetime.now()
         else:
-            self.end_time = datetime.strptime(end_time+"000", "%d%b%Y_%H:%M:%S.%f")
+            self.stop_time = datetime.strptime(stop_time+"000", "%d%b%Y_%H:%M:%S.%f")
 
     def duration(self):
-        delta = self.end_time - self.start_time
+        delta = self.stop_time - self.start_time
         return delta.total_seconds() * 1000
 
 class TreeBuilder:
@@ -48,6 +50,8 @@ class TreeBuilder:
     def __init__(self, file_name):
         self.file_name = file_name
         self.storage = []   # an empty tree
+        self.begin_time = None        # begin time of entire file
+        self.end_time = None          # end time of entire file
 
     def __repr__(self):
         s = '{"log": '
@@ -57,7 +61,7 @@ class TreeBuilder:
 
     def printNode(self, node_id):
         # 1. print the element
-        s = '{"function": {' + str(self.storage[node_id][0])
+        s = '{' + str(self.storage[node_id][0])
 
         # 2. recurrsively print children
         children = self.storage[node_id][2]
@@ -71,7 +75,7 @@ class TreeBuilder:
             s += ']'
 
         # 3. print close tag
-        s += '}}'
+        s += '}'
 
         return s
 
@@ -88,7 +92,7 @@ class TreeBuilder:
 
     def parseTrace(self, line, node_id):
         # the log file has below format:
-        # 23JUN2016_15:19:16.465 61504:140484032833280 TRACE ibarbutil_functrace.h:27 IBARBUTIL.FUNCTIONTRACE  Enter void BloombergLP::s_ibrarbpost::RequestHelper::processCloseRoomRequest(bsl::shared_ptr<BloombergLP::ibrarbpostmsgs::GenericPostRequestWrapper>, bsl::shared_ptr<BloombergLP::s_ibrarbpost::RequestContext>, bsl::shared_ptr<BloombergLP::ibarbdispatcher::RequestCompletionGuard>, bool) 6299469577153151008
+        # 27JUN2016_16:29:25.894 17083:140013532595968 TRACE ibarbutil_functrace.h:27 IBARBUTIL.FUNCTIONTRACE  Enter 6300971995367997599 RequestHelper::processCloseRoomRequest
 
         # we will need column 1, 6 and 7-
         # column 1 is timestamp
@@ -97,6 +101,14 @@ class TreeBuilder:
         fields = line.split()
         timestamp = fields[0]
         entry = fields[5] == "Enter"
+
+        if self.begin_time is None:
+            self.begin_time = timestamp
+
+        if self.end_time is None:
+            self.end_time = timestamp
+        elif self.end_time < timestamp:
+            self.end_time = timestamp
 
         if (entry):
             # get function signature from the 6th space
@@ -109,12 +121,11 @@ class TreeBuilder:
         else:
             # update end time
             # return parent node id
-            self.storage[node_id][0].setEndTime(timestamp)
+            self.storage[node_id][0].setStopTime(timestamp)
             return self.storage[node_id][1]
 
     def loadFromLog(self):
         try:
-            print "### reading file " + self.file_name
             file = open(self.file_name, 'r')
 
             del self.storage[:]  # cleanup the node list
@@ -125,6 +136,9 @@ class TreeBuilder:
 
             for line in file:
                 current_node = self.parseTrace(line.strip(), current_node)
+
+            root[0].setStartTime(self.begin_time)
+            root[0].setStopTime(self.end_time)
 
             file.close()
         except:
@@ -172,7 +186,7 @@ def printTree(tree, outfile):
     if outfile:
         try:
             out = open(outfile, 'w')
-            out.write(tree)
+            out.write(str(tree))
             out.close()
         except:
             traceback.print_exc()
@@ -182,10 +196,11 @@ def printTree(tree, outfile):
 
 def main(argv):
     infile = ''
-    outfile = ''
+    statfile = ''
+    callfile = ''
 
     try:
-        opts, args = getopt(argv, 'hl:o:', ['log=', 'out='])
+        opts, args = getopt(argv, 'hl:c:s:', ['log=', 'call=', 'stat='])
     except:
         help()
         return -1
@@ -196,8 +211,10 @@ def main(argv):
             return 0
         elif opt in ('-l', '--log'):
             infile = arg
-        elif opt in ('-o', '--out'):
-            outfile = arg
+        elif opt in ('-c', '--call'):
+            callfile = arg
+        elif opt in ('-s', '--stat'):
+            statfile = arg
         else:
             help()
             return -1
@@ -208,7 +225,8 @@ def main(argv):
     table = {}
     tree.stat(0, table)
 
-    printStat(table, outfile)
+    printStat(table, statfile)
+    printTree(tree, callfile)
 
     return 0
 
