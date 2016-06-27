@@ -131,10 +131,57 @@ class TreeBuilder:
         finally:
             file.close()
 
+    def stat(self, node_id, table):
+        # analyze the tree to get statistic date of each function
+        # function_name, execute_times, total_time
+        key = self.storage[node_id][0]
+        element = self.storage[node_id][0]
+        key = element.func_name
+        duration = element.duration()
+        if key in table:
+            table[key]['count'] += 1
+            table[key]['time'] += duration
+        else:
+            table[key] = {'count':1, 'time':duration}
+
+        for child in self.storage[node_id][2]:
+            # go through all the children
+            self.stat(child, table)
+
+### end of class TreeBuilder
 
 def help():
     print 'Usage: profile.py -l <logfile>'
 
+def printStat(table, outfile):
+    s = ""
+    for func in table:
+        s = func + ', ' + str(table[func]['count']) + ', ' + str(table[func]['time']) + '\n'
+
+    if outfile:
+        try:
+            out = open(outfile, 'w')
+            out.write(s)
+        except:
+            traceback.print_exc()
+            print "Error in writting file: " + outfile
+        finally:
+            out.close()
+    else:
+        print s
+
+def printTree(tee, outfile):
+    if outfile:
+        try:
+            out = open(outfile, 'w')
+            out.write(tree)
+        except:
+            traceback.print_exc()
+            print "Error in writting file: " + outfile
+        finally:
+            out.close()
+    else:
+        print tree
 
 def main(argv):
     infile = ''
@@ -161,12 +208,9 @@ def main(argv):
     tree = TreeBuilder(infile)
     tree.loadFromLog()
 
-    if outfile:
-        out = open(outfile, 'w')
-        out.write(str(tree))
-        out.close()
-    else:
-        print tree
+    table = {}
+    tree.stat(0, table)
+    printStat(table, outfile)
 
     return 0
 
