@@ -4,6 +4,7 @@ from getopt import getopt
 from sys import argv
 from datetime import datetime
 from datetime import timedelta
+from operator import itemgetter
 
 from tree import TreeNode
 
@@ -145,17 +146,27 @@ class TreeBuilder:
             traceback.print_exc()
             print "Error in reading file: " + str(self.file_name)
 
+    def selfTime(self, node_id):
+        # self time is the total execution elapse time of a function minus time consumed by its sub functions
+        total = self.storage[node_id][0].duration()
+        sub = 0
+        for subnode in self.storage[node_id][2]:
+            sub += self.storage[subnode][0].duration()
+        return total - sub
+
     def stat(self, node_id, table):
         # analyze the tree to get statistic date of each function
         # function_name, execute_times, total_time
         element = self.storage[node_id][0]
         key = element.func_name.split()[1]
         duration = element.duration()
+
         if key in table:
             table[key]['count'] += 1
             table[key]['time'] += duration
+            table[key]['selftime'] += self.selfTime(node_id)
         else:
-            table[key] = {'count':1, 'time':duration}
+            table[key] = {'count':1, 'time':duration, 'selftime':self.selfTime(node_id)}
 
         for child in self.storage[node_id][2]:
             # go through all the children
@@ -167,9 +178,17 @@ def help():
     print 'Usage: profile.py -l <logfile>'
 
 def printStat(table, outfile):
-    s = ""
+    array = []
     for func in table:
-        s += func + ', ' + str(table[func]['count']) + ', ' + str(table[func]['time']) + '\n'
+        array.append((func, table[func]['count'], table[func]['time'], table[func]['selftime']))
+    array.sort(key=itemgetter(1,3), reverse=True)
+
+    s = 'function name, calls, total time, self time\n'
+    for name, calls, total_time, self_time in array:
+        s += name + ', '
+        s += str(calls) + ', '
+        s += str(total_time) + ', '
+        s += str(self_time) + '\n'
 
     if outfile:
         try:
