@@ -40,7 +40,7 @@ class FunctionTrace:
 
     def duration(self):
         delta = self.stop_time - self.start_time
-        return delta.total_seconds() * 1000
+        return int(delta.total_seconds() * 1000)
 
 class TreeBuilder:
     # construct a tree structure from log file
@@ -178,17 +178,22 @@ def help():
     print 'Usage: profile.py -l <logfile>'
 
 def printStat(table, outfile):
+    # dump dict to list
     array = []
     for func in table:
-        array.append((func, table[func]['count'], table[func]['time'], table[func]['selftime']))
-    array.sort(key=itemgetter(1,3), reverse=True)
+        it = table[func]
+        array.append((func, it['count'], it['time'], it['selftime'], float(it['time'])/it['count'], float(it['selftime'])/it['count']))
+    # sort list by average self time
+    array.sort(key=itemgetter(5,1), reverse=True)
 
-    s = 'function name, calls, total time, self time\n'
-    for name, calls, total_time, self_time in array:
+    s = 'function name, calls, total time, self time, avg time, avg self time\n'
+    for name, calls, total_time, self_time, avg_time, avg_total_time in array:
         s += name + ', '
         s += str(calls) + ', '
         s += str(total_time) + ', '
-        s += str(self_time) + '\n'
+        s += str(self_time) + ', '
+        s += str(avg_time) + ', '
+        s += str(avg_total_time) + '\n'
 
     if outfile:
         try:
